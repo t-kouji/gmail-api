@@ -35,61 +35,47 @@ service = gmail_get_service()
 messages = service.users().messages()
 # 自分のメッセージ一覧を10件得る
 msg_list = messages.list(userId='me', maxResults=10).execute()
-
-
-import sys
-print(sys.version)
-# print(msg_list)
+pprint.pprint(msg_list)
 
 # メッセージ一覧の最新の一つを得る
 msg = msg_list['messages'][0]
 id = msg['id']
 threadId = msg['threadId']
-print(f'id:{id} threadId:{threadId}')
+# print(f'id:{id} threadId:{threadId}')
 
-# メッセージの本体を取得する
-data = messages.get(userId='me', id=id).execute()
+#取得したメッセージ一覧の中に添付ファイルが存在するメッセージのIDをリストとして取得。
+def list_of_attachments_ID(msg_list):
+    list_of_attachments_ID= []
+    for msg in msg_list:
+        id = msg['id']
+        # メッセージの本体を取得する
+        data = messages.get(userId='me', id=id).execute()
+        try:
+            if data['payload']['parts'][1]['body']['attachmentId']:
+                list_of_attachments_ID.append(id)
+        except KeyError:
+            continue
+    return list_of_attachments_ID
 
-# メッセージの本体の要約（snippet）を取得し出力する
-print(data['snippet'])
-pprint.pprint(data)
-attachment_str = data['payload']['parts'][1]['body']['attachmentId']
+print(list_of_attachments_ID(msg_list['messages']))
 
-"""Retrieve an attachment from a Message."""
 
 import base64
 from googleapiclient import errors
 
+def GetAttachments(id,attachment_id):
+    # 添付ファイルのidを取得
+    # attachment_id = data['payload']['parts'][1]['body']['attachmentId']
+    for d in attachment_id:
+        # 添付ファイルの本体を取得
+        # attachment = messages.attachments().get(userId='me',messageId = id, id=d).execute()
+        # # 添付ファイルのコードを変換
+        # file_data = base64.urlsafe_b64decode(attachment['data'])
+        # print(file_data)
+        print(d)
+        print(id)
 
-def GetAttachments(service, user_id, msg_id):
-# -------
-# #   Get and store attachment from Message with given id.
-# #   Args:
-# #     service: Authorized Gmail API service instance.
-# #     user_id: User's email address. The special value "me"
-# #     can be used to indicate the authenticated user.
-# #     msg_id: ID of Message containing attachment.
-# #     store_dir: The directory used to store attachments.
-# -------
-    try:
-
-        attachment = messages.attachments().get(userId='me',messageId = id, id=attachment_str).execute()
-        file_data = base64.urlsafe_b64decode(attachment['data'])
-        print(file_data)
-
-        # for part in message['payload']['parts']:
-        #     if part['filename']:
-        #         print(part['filename'])
-        #         file_data = base64.urlsafe_b64decode(part['parts'][0]['body']['data'].encode('UTF-8'))
-        #         path = ''.join([store_dir, part['filename']])
-
-        #         f = open(path, 'w')
-        #         f.write(file_data)
-        #         f.close()
-
-    except errors.HttpError as error:
-        print ('An error occurred: %s' % error)
+GetAttachments(id,list_of_attachments_ID(msg_list['messages']))
 
 
 
-GetAttachments(gmail_get_service,'me',id)
